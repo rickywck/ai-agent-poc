@@ -56,73 +56,53 @@ for obs in observations:
 # print database created 
 print("Database created successfully ...")
 
-from typing import Annotated, Sequence, TypedDict
-from langchain_core.messages import BaseMessage
-from langgraph.graph import END, Graph
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.utilities import SQLDatabase
+from langchain_community.chat_models import ChatOpenAI
+from langchain_mistralai import ChatMistralAI
 from langchain_ollama import ChatOllama
-from langchain_core.tools import Tool
-from operator import itemgetter
-from langchain.tools.sql_database.tool import QuerySQLDataBaseTool
+from langchain.agents.agent_types import AgentType
 
 # Wrap the engine with SQLDatabase
 db = SQLDatabase(engine)
 
+from langchain_community.llms import OpenAI
+
 # Initialize the LLM
+#llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, verbose=True)
+#llm = ChatOllama(model="deepseek-r1:8b")
 llm = ChatOllama(model="tulu3:8b")
+#llm = ChatOllama(model="qwen2.5:7b")
+#llm = ChatOllama(model="llama3.1:8b")
 
-# Create SQL database tool
-sql_tool = QuerySQLDataBaseTool(db=db)
+#llm = ChatMistralAI(
+#    model="mistral-small-latest",
+#    temperature=0,
+#    max_retries=2,
+#    # other params...
+#)
 
-# Define the state for our graph
-class AgentState(TypedDict):
-    messages: Sequence[BaseMessage]
-    next: str
+from langchain_community.agent_toolkits.sql.base import create_sql_agent
+from langchain_community.agent_toolkits.sql.base import SQLDatabaseToolkit
 
-# Create the prompt template
-prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are a helpful SQL assistant that helps users query stock price information.
-    Use the provided SQL tool to answer questions about stock prices.
-    Always explain your reasoning before executing queries."""),
-    MessagesPlaceholder(variable_name="messages"),
-])
+# Create a toolkit for the database
+toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 
-# Define the nodes for our graph
-def agent(state: AgentState):
-    messages = state["messages"]
-    
-    # Generate response using the LLM
-    response = llm.invoke(prompt.invoke({"messages": messages}))
-    
-    # If we need to query the database
-    if "SELECT" in response.content.upper():
-        # Extract the SQL query
-        query = response.content[response.content.find("SELECT"):].split(";")[0]
-        try:
-            result = sql_tool.invoke(query)
-            return {"messages": messages + [response] + [("system", f"Query result: {result}")], "next": END}
-        except Exception as e:
-            return {"messages": messages + [response] + [("system", f"Error: {str(e)}")], "next": END}
-    
-    return {"messages": messages + [response], "next": END}
+# Create the agent
+agent_executor = create_sql_agent(
+    llm=llm,
+    toolkit=toolkit,
+    verbose=True,
+    agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    max_iterations=20
+)
 
-# Create the graph
-workflow = Graph()
-workflow.add_node("agent", agent)
-workflow.set_entry_point("agent")
+#query = "What is the price of 'ABC' stock on January 1, 2023?"
+#response = agent_executor.invoke(query)
+#print(response)
 
-# Compile the graph
-chain = workflow.compile()
-
-# Example query
 query = "What are the stock prices for 'ABC' and 'XYZ' on January 3rd and January 4th?"
-response = chain.invoke({
-    "messages": [("human", query)]
-})
-print("\nFinal Response:")
-for message in response["messages"]:
-    print(f"{message.type}: {message.content}")
+response = agent_executor.invoke(query)
+print(response)
 
 
 
