@@ -57,8 +57,8 @@ for obs in observations:
 print("Database created successfully ...")
 
 from langchain_community.utilities import SQLDatabase
-from langchain_community.chat_models import ChatOpenAI
-from langchain_mistralai import ChatMistralAI
+from langchain_openai import ChatOpenAI
+#from langchain_mistralai import ChatMistralAI
 from langchain_ollama import ChatOllama
 from langchain.agents.agent_types import AgentType
 
@@ -100,9 +100,20 @@ agent_executor = create_sql_agent(
 #response = agent_executor.invoke(query)
 #print(response)
 
-query = "What are the stock prices for 'ABC' and 'XYZ' on January 3rd and January 4th?"
-response = agent_executor.invoke(query)
-print(response)
+#query = "What are the stock prices for 'ABC' and 'XYZ' on January 3rd and January 4th?"
+#response = agent_executor.invoke(query)
+#print(response)
 
 
+import sys
+
+print("Enter the question:")
+query = sys.stdin.readline().strip()
+while True:
+    response = agent_executor.invoke(query)
+    print(response)
+    print("Next question:")
+    query = sys.stdin.readline().strip()
+    if query == "exit":
+        break
 
