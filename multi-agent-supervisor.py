@@ -41,6 +41,7 @@ from typing_extensions import TypedDict
 
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langgraph.graph import MessagesState, END
 from langgraph.types import Command
 
@@ -66,8 +67,8 @@ class Router(TypedDict):
 
 
 #llm = ChatAnthropic(model="claude-3-5-sonnet-latest")
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, verbose=True)
-
+#llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, verbose=True)
+llm = ChatOllama(model="qwen2.5:7b")
 
 class State(MessagesState):
     next: str
@@ -130,9 +131,9 @@ builder.add_node("researcher", research_node)
 builder.add_node("coder", code_node)
 graph = builder.compile()
 
-from IPython.display import display, Image
-
-display(Image(graph.get_graph().draw_mermaid_png()))
+# no need to show the graph when the code is running in command line
+#from IPython.display import display, Image
+#display(Image(graph.get_graph().draw_mermaid_png()))
 
 for s in graph.stream(
     {"messages": [("user", "What's the square root of 42?")]}, subgraphs=True
