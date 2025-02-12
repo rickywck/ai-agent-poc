@@ -11,7 +11,7 @@ _set_if_undefined("ANTHROPIC_API_KEY")
 _set_if_undefined("TAVILY_API_KEY")
 
 # Ask for LLM mode
-llm_mode = input("Select LLM mode (OpenAI/Ollama): ").strip().lower() or "openai"
+llm_mode = input("Select LLM mode (OpenAI/Ollama/Gemini): ").strip().lower() or "openai"
 if llm_mode == "openai":
     model = input("Enter OpenAI model (default: gpt-4o-mini): ").strip() or "gpt-4o-mini"
     from langchain_openai import ChatOpenAI
@@ -21,8 +21,13 @@ elif llm_mode == "ollama":
     from langchain_ollama import ChatOllama
     llm = ChatOllama(model=model)
     print(f"Using Ollama model: {model}")
+elif llm_mode == "gemini":
+    model = input("Enter Gemini model (default: gemini-2.0-flash): ").strip() or "gemini-2.0-flash"
+    from langchain_google_vertexai import ChatVertexAI
+    llm = ChatVertexAI(model=model, temperature=0, max_tokens=None, max_retries=6, stop=None)
+    print(f"Using Gemini model: {model}")
 else:
-    raise ValueError("Invalid LLM mode selected. Please choose either 'OpenAI' or 'Ollama'.")
+    raise ValueError("Invalid LLM mode selected. Please choose either 'OpenAI', 'Ollama', or 'Gemini'.")
 
 from typing import Annotated
 
@@ -56,6 +61,7 @@ from typing_extensions import TypedDict
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 from langchain_mistralai import ChatMistralAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_ollama import ChatOllama
 from langgraph.graph import MessagesState, END
 from langgraph.types import Command
@@ -85,6 +91,7 @@ class Router(TypedDict):
 #llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, verbose=True)
 #llm = ChatMistralAI(model="mistral-small-latest", temperature=0)
 #llm = ChatOllama(model="qwen2.5:7b")
+#llm = ChatVertexAI(model="gemini-2.0-flash",temperature=0,max_tokens=None,max_retries=6,stop=None)
 
 class State(MessagesState):
     next: str
