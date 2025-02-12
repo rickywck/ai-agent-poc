@@ -10,6 +10,20 @@ def _set_if_undefined(var: str):
 _set_if_undefined("ANTHROPIC_API_KEY")
 _set_if_undefined("TAVILY_API_KEY")
 
+# Ask for LLM mode
+llm_mode = input("Select LLM mode (OpenAI/Ollama): ").strip().lower() or "openai"
+if llm_mode == "openai":
+    model = input("Enter OpenAI model (default: gpt-4o-mini): ").strip() or "gpt-4o-mini"
+    from langchain_openai import ChatOpenAI
+    llm = ChatOpenAI(model=model, temperature=0, verbose=True)
+elif llm_mode == "ollama":
+    model = input("Enter Ollama model (default: qwen2.5:7b): ").strip() or "qwen2.5:7b"
+    from langchain_ollama import ChatOllama
+    llm = ChatOllama(model=model)
+    print(f"Using Ollama model: {model}")
+else:
+    raise ValueError("Invalid LLM mode selected. Please choose either 'OpenAI' or 'Ollama'.")
+
 from typing import Annotated
 
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -41,6 +55,7 @@ from typing_extensions import TypedDict
 
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
+from langchain_mistralai import ChatMistralAI
 from langchain_ollama import ChatOllama
 from langgraph.graph import MessagesState, END
 from langgraph.types import Command
@@ -68,7 +83,8 @@ class Router(TypedDict):
 
 #llm = ChatAnthropic(model="claude-3-5-sonnet-latest")
 #llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, verbose=True)
-llm = ChatOllama(model="qwen2.5:7b")
+#llm = ChatMistralAI(model="mistral-small-latest", temperature=0)
+#llm = ChatOllama(model="qwen2.5:7b")
 
 class State(MessagesState):
     next: str
@@ -78,8 +94,13 @@ def supervisor_node(state: State) -> Command[Literal["researcher", "coder", "__e
     messages = [
         {"role": "system", "content": system_prompt},
     ] + state["messages"]
-    response = llm.with_structured_output(Router).invoke(messages)
-    goto = response["next"]
+    try:
+        response = llm.with_structured_output(Router).invoke(messages)
+        goto = response["next"]
+    except TypeError as e:
+        print(f"Error: {e}")
+        print("LLM response:", response)
+        exit(1)
     if goto == "FINISH":
         goto = END
 
