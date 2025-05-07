@@ -77,12 +77,12 @@ system_prompt = (
     f" following workers: {members}. Given the following user request,"
     " respond with the worker to act next. Each worker will perform a"
     " task and respond with their results and status. When finished,"
-    " respond with FINISH."
+    " respond with FINISH. Make sure to specify the worker to route to next."
 )
 
 
 class Router(TypedDict):
-    """Worker to route to next. If no workers needed, route to FINISH."""
+    """Worker to route to next. If no workers needed or answer is found, route to FINISH."""
 
     next: Literal["researcher", "coder", "FINISH"]
 
@@ -120,7 +120,7 @@ from langgraph.prebuilt import create_react_agent
 
 
 research_agent = create_react_agent(
-    llm, tools=[tavily_tool], prompt="You are a researcher. DO NOT do any math."
+    llm, tools=[tavily_tool], prompt="You are a researcher. DO NOT do any math. Requests requiring calculation should be routed to workers which can perform calculation such as coder, calculator."
 )
 
 
@@ -137,7 +137,7 @@ def research_node(state: State) -> Command[Literal["supervisor"]]:
 
 
 # NOTE: THIS PERFORMS ARBITRARY CODE EXECUTION, WHICH CAN BE UNSAFE WHEN NOT SANDBOXED
-code_agent = create_react_agent(llm, tools=[python_repl_tool])
+code_agent = create_react_agent(llm, tools=[python_repl_tool], prompt="You are a coder which can execute any code and perform math operations.")
 
 
 def code_node(state: State) -> Command[Literal["supervisor"]]:
